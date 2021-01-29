@@ -1,3 +1,3 @@
-IRRIGATION CONTROL SYSTEM
-===========================
+Control y monitorizacion de riego
+=================================
 
