@@ -49,7 +49,7 @@ bool sensorsGatekeeper_setName(uint32_t ID, char *sensorName) /*returns True if 
 {
   static char emptyString[] = ""; /*To be send in case of error*/
 
-  if( strlen(sensorName) <= MAX_NAME)
+  if( strlen(sensorName) <= MAX_NAME_SIZE)
      return setGenericPublicOrder(ID, setName, (void *) sensorName);
   else
     return setGenericPublicOrder(ID, setName, (void *) emptyString);
@@ -86,7 +86,7 @@ bool sensorsGatekeeper_setMeasureInterval(uint32_t ID, uint32_t measureInterval 
 
 bool sensorsGatekeeper_getMeasure(uint32_t ID, struct_sensor_measure *measure ) /*returns True if OK, else False*/
 {
-  struct_sensor_measure measure_private = {0, 0};
+  struct_sensor_measure *measure_private = NULL;
   measure_private = measure;
   return setGenericPublicOrder(ID, getMeasure, (void *) measure_private );
 

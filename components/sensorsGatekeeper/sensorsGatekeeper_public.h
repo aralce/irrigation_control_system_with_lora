@@ -9,7 +9,7 @@
 #define SENSORSGATEKEEPER_SENSORSGATEKEEPER_PUBLIC_H_
 
 /* Includes ------------------------------------------------------------------*/
-#include "sensorsGatekeeper_internal.h"
+#include "private/sensorsGatekeeper_internal.h"
 
 
 /*Public functions -------------------------------------------------------------*/
