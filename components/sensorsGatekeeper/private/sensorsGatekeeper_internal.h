@@ -9,32 +9,10 @@
 #define SENSORSGATEKEEPER_SENSORSGATEKEEPER_INTERNAL_H_
 
 /* Includes -------------------------------------------------------------------------------------------------*/
-#include "stm32f4xx_hal.h"
-#include <string.h>
-#include <stdbool.h>
-#include <cmsis_os.h>
-#include <stdlib.h>
+#include "sensorsGatekeeper_drivers.h"
 
 
 /* Typedefs -------------------------------------------------------------------------------------------------*/
-
-/**
- * @brief Clasifica el tipo de sensor
- *
- * Se reservan 16bits para clasificar los sensores.
- * Cada sensor deberá tener su driver asociado para tomar
- * las mediciones del sensor.
- *
- * Si desea crear un driver, su función prototipo debe ser debe ser: TBD.
- */
-
-typedef enum{ /*max quantity of sensors types: 255 */
-  noSensor,
-  analog,
-  rs485,
-  sensorType_ENUM_END
-}enum_sensorType;
-
 
 typedef enum
 {
@@ -55,8 +33,9 @@ typedef enum
   INVALID_NAME,
   INVALID_SENSOR_TYPE,
   INVALID_MEASURE_INTERVAL,
-  ERROR
+
 }enum_sensorOrderError;
+
 
 /**
  * @brief Estructura básica de medición
@@ -70,8 +49,16 @@ typedef struct{
 }struct_sensor_measure;
 
 
+/*Public variables --------------------------------------------------------------------------------------------*/
+uint32_t timerID[MAX_SENSOR_ID];
+
+
 /*Public functions --------------------------------------------------------------------------------------------*/
 
 void sensorsGatekeeper_internal_init( osMessageQueueId_t *qSensorsGatekeeperINHandle, osMessageQueueId_t *qSensorsGatekeeperOUTHandle );
+
+void sensorsGatekeeper_processIncomingOrders(void);
+
+bool sensorsGatekeeper_takeMeasure( uint32_t sensorID ); /*returns true if there is no error*/
 
 #endif /* SENSORSGATEKEEPER_SENSORSGATEKEEPER_INTERNAL_H_ */

@@ -7,7 +7,7 @@
 
 #include "sensorsGatekeeper_internal.h"
 #include "cmsis_os.h"
-#include "../config/configuration.h"
+#include "../../config/configuration.h"
 
 /*Private typedefs --------------------------------------------------------------------------------------------*/
 
@@ -19,7 +19,8 @@ typedef struct {
   struct_sensor_measure measure;
 }struct_sensor;
 
-
+/*Pointer to function */
+typedef uint32_t (*sensor_measureDriverfunction_t)( uint32_t sensorID );
 
 /*Private variables --------------------------------------------------------------------------------------------*/
 static osMessageQueueId_t *qSensorsGatekeeperIN_private = NULL;
@@ -42,10 +43,48 @@ static struct{
   enum_sensorOrderError errorType;
 } OUT_struct;
 
+/*Pointer to measure function driver*/
+sensor_measureDriverfunction_t takeMeasureFromSensor[MAX_SENSOR_ID];
 
 
-/*Private function declarations --------------------------------------------------------------------------------*/
-static sensorsGatekeeper_readIncomingOrders()
+/*Public function definition ----------------------------------------------------------------------------------*/
+
+void sensorsGatekeeper_internal_init( osMessageQueueId_t *qSensorsGatekeeperINHandle, osMessageQueueId_t *qSensorsGatekeeperOUTHandle )
+{
+
+  uint32_t sensorNumber = 0;
+  char tmp[17] = ""; /*helps to load the sensor number on the sensor name.*/
+
+  qSensorsGatekeeperIN_private = qSensorsGatekeeperINHandle; /*saves the pointer to the queue to work with it receiving the orders to execute*/
+  qSensorsGatekeeperOUT_private = qSensorsGatekeeperOUTHandle; /*saves the pointer to the queue to work with it sending the messages to the datalogger*/
+
+  for(sensorNumber = 0; sensorNumber <=MAX_SENSOR_ID; sensorNumber++)
+    {
+      sensor[sensorNumber].ID = sensorNumber;
+
+      /*loads the sensor name*/
+      strcpy( (char* volatile) sensor[sensorNumber].name, "Sensor ");
+      itoa( sensorNumber, tmp, 10 );
+      strcat( (char* volatile) sensor[sensorNumber].name, (const char* volatile) tmp );
+
+      sensor[sensorNumber].type = noSensor;
+      sensor[sensorNumber].measureInterval = 0;
+      sensor[sensorNumber].measure.timestamp = 0;
+      sensor[sensorNumber].measure.value = 0;
+
+      /*sets the driver function for the sensor*/
+      takeMeasureFromSensor[sensorNumber] = driverArray[INITIAL_SENSOR_DRIVER];
+
+      /*initializes the timer ID*/
+      timerID[sensorNumber] = sensorNumber;
+    }
+}
+
+
+
+/*Private function declarations -------------------------------------------------------------------------------*/
+
+void sensorsGatekeeper_processIncomingOrders(void)
 {
   static const char *sensorName = NULL; /*to return the sensor name of the sensor used*/
   static enum_sensorType sensorType = sensorType_ENUM_END; /*ENUM_END is used to know the number of elements and as a signal of error*/
@@ -61,11 +100,12 @@ static sensorsGatekeeper_readIncomingOrders()
       /*executes the order*/
       if( IN_struct.ID <= MAX_SENSOR_ID ) /*checks the ID*/
       {
-        sensorName = (const char *) sensor[ID].name;
+        sensorName = (const char *) sensor[IN_struct.ID].name;
         OUT_struct.errorType = OK;
       }
       else
-    	sensorName = NULL; /*if there is an error*/
+      {
+        sensorName = NULL; /*if there is an error*/
         OUT_struct.errorType = INVALID_ID;
       }
 
@@ -84,7 +124,7 @@ static sensorsGatekeeper_readIncomingOrders()
       {
         if( strcmp(sensorName, "") != 0 ) /*sensorsGatekeeper_public sends an empty string when the name is not valid*/
         {
-          strcpy( sensor[IN_structID].name, sensorName);
+          strcpy( sensor[IN_struct.ID].name, sensorName);
           OUT_struct.errorType = OK;
         }
         else
@@ -108,7 +148,7 @@ static sensorsGatekeeper_readIncomingOrders()
     case getType:
       if( IN_struct.ID <= MAX_SENSOR_ID ) /*checks the ID*/
       {
-        sensorType = sensor[ID].type;
+        sensorType = sensor[IN_struct.ID].type;
         OUT_struct.errorType = OK;
       }
       else
@@ -132,8 +172,11 @@ static sensorsGatekeeper_readIncomingOrders()
       {
         if(sensorType > sensorType_ENUM_END) /*checks if the sensorType is valid*/
         {
-          sensor[ID].type = sensorType;
+          sensor[IN_struct.ID].type = sensorType;
           OUT_struct.errorType = OK;
+
+          /*sets the corresponding measure function*/
+          takeMeasureFromSensor[IN_struct.ID] = driverArray[(uint32_t) sensorType];
         }
         else
           OUT_struct.errorType = INVALID_SENSOR_TYPE;
@@ -151,7 +194,7 @@ static sensorsGatekeeper_readIncomingOrders()
     case getMeasureInterval:
       if( IN_struct.ID <= MAX_SENSOR_ID ) /*checks the ID*/
       {
-        measureInterval = sensor[ID].measureInterval;
+        measureInterval = sensor[IN_struct.ID].measureInterval;
         OUT_struct.errorType = OK;
       }
       else
@@ -167,11 +210,12 @@ static sensorsGatekeeper_readIncomingOrders()
     case setMeasureInterval:
       measureInterval = (uint32_t) IN_struct.data;
 
-      if( IN_struct.ID <= MAX_SENSOR_ID ) /*checks the ID*/
+      /*checks the entry data*/
+      if( IN_struct.ID <= MAX_SENSOR_ID )
       {
         if( measureInterval <= MAX_MEASURE_INTERVAL )
         {
-          sensor[ID].measureInterval = measureInterval;
+          sensor[IN_struct.ID].measureInterval = measureInterval;
           OUT_struct.errorType = OK;
         }
         else
@@ -190,7 +234,7 @@ static sensorsGatekeeper_readIncomingOrders()
     case getMeasure:
       if( IN_struct.ID <= MAX_SENSOR_ID )
       {
-        sensorMeasure = &sensor[ID].measure;
+        sensorMeasure = &sensor[IN_struct.ID].measure;
         OUT_struct.errorType = OK;
       }
       else
@@ -213,29 +257,16 @@ static sensorsGatekeeper_readIncomingOrders()
 
 }
 
-/*Public function definition ----------------------------------------------------------------------------------*/
-
-void sensorsGatekeeper_internal_init( osMessageQueueId_t *qSensorsGatekeeperINHandle, osMessageQueueId_t *qSensorsGatekeeperOUTHandle )
+/*Used by the timers to take the measure from the sensor*/
+bool sensorsGatekeeper_takeMeasure( uint32_t sensorID )
 {
+  bool returnValue = false;
 
-  int sensorNumber = 0;
-  char tmp[17] = ""; /*helps to load the sensor number on the sensor name.*/
-
-  qSensorsGatekeeperIN_private = qSensorsGatekeeperINHandle; /*saves the pointer to the queue to work with it receiving the orders to execute*/
-  qSensorsGatekeeperOUT_private = qSensorsGatekeeperOUTHandle; /*saves the pointer to the queue to work with it sending the messages to the datalogger*/
-
-  for(sensorNumber = 0; sensorNumber <=MAX_SENSOR_ID; sensorNumber++)
-    {
-      sensor[sensorNumber].ID = sensorNumber;
-
-      /*loads the sensor name*/
-      strcpy( (char* volatile) sensor[sensorNumber].name, "Sensor ");
-      itoa( sensorNumber, tmp, 10 );
-      strcat( (char* volatile) sensor[sensorNumber].name, (const char* volatile) tmp );
-
-      sensor[sensorNumber].type = noSensor;
-      sensor[sensorNumber].measureInterval = 0;
-      sensor[sensorNumber].measure.timestamp = 0;
-      sensor[sensorNumber].measure.value = 0;
-    }
+  /*checks the sensorID*/
+  if( sensorID <= MAX_SENSOR_ID )
+  {
+    returnValue = true;
+    sensor[sensorID].measure.value = takeMeasureFromSensor[sensorID]( sensorID );
+    /*sensor measure.Timestamp: TBD*/
+  }
 }
