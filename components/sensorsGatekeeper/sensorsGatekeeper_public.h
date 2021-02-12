@@ -14,18 +14,6 @@
 
 /*Public functions -------------------------------------------------------------*/
 
-
-/**
- * @brief Inicializa el Gatekeeper.
- *
- * La inicialización acondiciona las estructuras internas de los sensores.
- * @see struct_sensor.
- *
- * @param Handler de la queue de entrada al Gatekeeper.
- */
-void sensorsGatekeeper_init(osMessageQueueId_t *qSensorsGatekeeperINHandle, osMessageQueueId_t *qSensorsGatekeeperOUTHandle);
-
-
 /**
  * @brief Obtiene el nombre del Sensor
  *
