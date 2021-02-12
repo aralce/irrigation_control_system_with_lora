@@ -9,7 +9,69 @@
 #include "cmsis_os.h"
 #include "../../config/configuration.h"
 
-/*Private typedefs --------------------------------------------------------------------------------------------*/
+
+/*Public variables --------------------------------------------------------------------------------------------*/
+
+/*tskSensorsGatekeeper */
+osThreadId_t tskSensorsGatekeeperHandle;
+const osThreadAttr_t tskSensorsGatekeeper_attributes = {
+  .name = "tskSensorsGatekeeper",
+  .priority = (osPriority_t) osPriorityAboveNormal,
+  .stack_size = 1024 * 4
+};
+
+/*Queues for INPUT and OUTPUT data*/
+/*qSensorsGatekeeperIN */
+osMessageQueueId_t qSensorsGatekeeperINHandle;
+const osMessageQueueAttr_t qSensorsGatekeeperIN_attributes = {
+  .name = "qSensorsGatekeeperIN"
+};
+/*qSensorsGetekeeperOUT */
+osMessageQueueId_t qSensorsGetekeeperOUTHandle;
+const osMessageQueueAttr_t qSensorsGetekeeperOUT_attributes = {
+  .name = "qSensorsGetekeeperOUT"
+};
+
+/*Sensors Timers*/
+/*timer_sensor0 */
+osTimerId_t timer_sensor0Handle;
+const osTimerAttr_t timer_sensor0_attributes = {
+  .name = "timer_sensor0"
+};
+/*timer_sensor1 */
+osTimerId_t timer_sensor1Handle;
+const osTimerAttr_t timer_sensor1_attributes = {
+  .name = "timer_sensor1"
+};
+/*timer_sensor2 */
+osTimerId_t timer_sensor2Handle;
+const osTimerAttr_t timer_sensor2_attributes = {
+  .name = "timer_sensor2"
+};
+/*timer_sensor3 */
+osTimerId_t timer_sensor3Handle;
+const osTimerAttr_t timer_sensor3_attributes = {
+  .name = "timer_sensor3"
+};
+/*timer_sensor4 */
+osTimerId_t timer_sensor4Handle;
+const osTimerAttr_t timer_sensor4_attributes = {
+  .name = "timer_sensor4"
+};
+/*timer_sensor5 */
+osTimerId_t timer_sensor5Handle;
+const osTimerAttr_t timer_sensor5_attributes = {
+  .name = "timer_sensor5"
+};
+/*timer_sensor6 */
+osTimerId_t timer_sensor6Handle;
+const osTimerAttr_t timer_sensor6_attributes = {
+  .name = "timer_sensor6"
+};
+
+
+
+/*Private typedefs ----------------------------------------------------------------------------------------------*/
 
 typedef struct {
   uint32_t ID; /*sensor identifier*/
@@ -22,9 +84,10 @@ typedef struct {
 /*Pointer to function */
 typedef uint32_t (*sensor_measureDriverfunction_t)( uint32_t sensorID );
 
-/*Private variables --------------------------------------------------------------------------------------------*/
-static osMessageQueueId_t *qSensorsGatekeeperIN_private = NULL;
-static osMessageQueueId_t *qSensorsGatekeeperOUT_private = NULL;
+
+
+
+/*Private variables ---------------------------------------------------------------------------------------------*/
 
 /*List of sensors */
 static struct_sensor sensor[MAX_SENSOR_ID + 1];
@@ -47,17 +110,63 @@ static struct{
 sensor_measureDriverfunction_t takeMeasureFromSensor[MAX_SENSOR_ID];
 
 
-/*Public function definition ----------------------------------------------------------------------------------*/
 
-void sensorsGatekeeper_internal_init( osMessageQueueId_t *qSensorsGatekeeperINHandle, osMessageQueueId_t *qSensorsGatekeeperOUTHandle )
+/*Private function definitions ----------------------------------------------------------------------------------*/
+inline uint32_t HAL_secondsToTicks( uint32_t seconds ){
+  uint32_t returnValue = 0;
+  uint32_t comparator = ~0; /*sets comparator to the max value permitted to a uint32_t variable*/
+  uint64_t ticks = 0;
+
+  ticks = seconds*HAL_getTickFreq();
+
+  /*checks if there is overflow*/
+  if( ticks >= (uint64_t)comparator )
+    returnValue = comparator;
+  else
+    returnValue = ticks;
+
+  return returnValue;
+}
+
+static bool sensorsGatekeeper_setTimerPeriod( uint32_t sensorID ); /*returns true if sensorID is valid*/
+
+
+
+/*Public function definition -----------------------------------------------------------------------------------*/
+
+void sensorsGatekeeper_init( )
 {
 
   uint32_t sensorNumber = 0;
   char tmp[17] = ""; /*helps to load the sensor number on the sensor name.*/
 
-  qSensorsGatekeeperIN_private = qSensorsGatekeeperINHandle; /*saves the pointer to the queue to work with it receiving the orders to execute*/
-  qSensorsGatekeeperOUT_private = qSensorsGatekeeperOUTHandle; /*saves the pointer to the queue to work with it sending the messages to the datalogger*/
+  /* creation of tskSensorsGatekeeper */
+    tskSensorsGatekeeperHandle = osThreadNew(sensorsGatekeeper_task, NULL, &tskSensorsGatekeeper_attributes);
 
+  /* Create the queue(s) */
+    /* creation of qSensorsGatekeeperIN */
+    qSensorsGatekeeperINHandle = osMessageQueueNew (32, sizeof(void *), &qSensorsGatekeeperIN_attributes);
+    /* creation of qSensorsGetekeeperOUT */
+    qSensorsGetekeeperOUTHandle = osMessageQueueNew (16, sizeof(void *), &qSensorsGetekeeperOUT_attributes);
+
+  /*creates the timers for the sensors*/
+    /* creation of timer_sensor0 */
+    timer_sensor0Handle = osTimerNew(sensorsGatekeeper_takeMeasure, osTimerPeriodic, (void*) timerID[0], &timer_sensor0_attributes);
+    /* creation of timer_sensor1 */
+    timer_sensor1Handle = osTimerNew(sensorsGatekeeper_takeMeasure, osTimerPeriodic, (void*) timerID[1], &timer_sensor1_attributes);
+    /* creation of timer_sensor2 */
+    timer_sensor2Handle = osTimerNew(sensorsGatekeeper_takeMeasure, osTimerPeriodic, (void*) timerID[2], &timer_sensor2_attributes);
+    /* creation of timer_sensor3 */
+    timer_sensor3Handle = osTimerNew(sensorsGatekeeper_takeMeasure, osTimerPeriodic, (void*) timerID[3], &timer_sensor3_attributes);
+    /* creation of timer_sensor4 */
+    timer_sensor4Handle = osTimerNew(sensorsGatekeeper_takeMeasure, osTimerPeriodic, (void*) timerID[4], &timer_sensor4_attributes);
+    /* creation of timer_sensor5 */
+    timer_sensor5Handle = osTimerNew(sensorsGatekeeper_takeMeasure, osTimerPeriodic, (void*) timerID[5], &timer_sensor5_attributes);
+    /* creation of timer_sensor6 */
+    timer_sensor6Handle = osTimerNew(sensorsGatekeeper_takeMeasure, osTimerPeriodic, (void*) timerID[6], &timer_sensor6_attributes);
+
+
+  /*Initializes the sensor structures*/
   for(sensorNumber = 0; sensorNumber <=MAX_SENSOR_ID; sensorNumber++)
     {
       sensor[sensorNumber].ID = sensorNumber;
@@ -82,16 +191,14 @@ void sensorsGatekeeper_internal_init( osMessageQueueId_t *qSensorsGatekeeperINHa
 
 
 
-/*Private function declarations -------------------------------------------------------------------------------*/
-
-void sensorsGatekeeper_processIncomingOrders(void)
+void sensorsGatekeeper_task(void* parameters)
 {
   static const char *sensorName = NULL; /*to return the sensor name of the sensor used*/
   static enum_sensorType sensorType = sensorType_ENUM_END; /*ENUM_END is used to know the number of elements and as a signal of error*/
   static uint32_t measureInterval = 0; /*to return the sensor interval of the sensor used*/
   static const struct_sensor_measure *sensorMeasure = NULL; /*to query the sensor measure*/
 
-  osMessageQueueGet(*qSensorsGatekeeperIN_private, &IN_struct, 0, osWaitForever ); /*waits until an order arrives*/
+  osMessageQueueGet(qSensorsGatekeeperINHandle, &IN_struct, 0, osWaitForever ); /*waits until an order arrives*/
 
   /*processes the command*/
   switch(IN_struct.operationType)
@@ -170,7 +277,7 @@ void sensorsGatekeeper_processIncomingOrders(void)
       /*executes the order*/
       if( IN_struct.ID <= MAX_SENSOR_ID ) /*checks the ID*/
       {
-        if(sensorType > sensorType_ENUM_END) /*checks if the sensorType is valid*/
+        if(sensorType < sensorType_ENUM_END) /*checks if the sensorType is valid*/
         {
           sensor[IN_struct.ID].type = sensorType;
           OUT_struct.errorType = OK;
@@ -257,16 +364,34 @@ void sensorsGatekeeper_processIncomingOrders(void)
 
 }
 
+
 /*Used by the timers to take the measure from the sensor*/
-bool sensorsGatekeeper_takeMeasure( uint32_t sensorID )
+void sensorsGatekeeper_takeMeasure( void* sensorID )
 {
-  bool returnValue = false;
 
   /*checks the sensorID*/
-  if( sensorID <= MAX_SENSOR_ID )
+  if( (uint32_t)sensorID <= MAX_SENSOR_ID )
   {
-    returnValue = true;
-    sensor[sensorID].measure.value = takeMeasureFromSensor[sensorID]( sensorID );
+    sensor[(uint32_t)sensorID].measure.value = takeMeasureFromSensor[(uint32_t)sensorID]((uint32_t)sensorID);
     /*sensor measure.Timestamp: TBD*/
+
+    /*loads the data onto the output structures*/
+    OUT_struct.operationType = getMeasure;
+    OUT_struct.ID = IN_struct.ID;
+    OUT_struct.data = (void *) sensor[(uint32_t)sensorID].measure.value;
+
+    /*sends the data to the datalogger*/
+    if( osMessageQueuePut(qSensorsGetekeeperOUTHandle, &OUT_struct, 0, 500) != osOK)
+      /*Error Message*/;
+
   }
 }
+
+
+/*Private function definitions ---------------------------------------------------------------------------------------*/
+
+static bool sensorsGatekeeper_setTimerPeriod( uint32_t sensorID ) /*returns true if sensorID is valid*/
+{
+
+}
+

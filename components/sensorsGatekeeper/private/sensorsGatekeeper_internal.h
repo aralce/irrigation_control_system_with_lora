@@ -10,7 +10,7 @@
 
 /* Includes -------------------------------------------------------------------------------------------------*/
 #include "sensorsGatekeeper_drivers.h"
-
+#include "../../config/configuration.h"
 
 /* Typedefs -------------------------------------------------------------------------------------------------*/
 
@@ -44,21 +44,65 @@ typedef enum
  * y un timestamp medido en ticks del sistema.
  */
 typedef struct{
-	uint32_t value;
-	uint32_t timestamp;
+  uint32_t value;
+  uint32_t timestamp;
 }struct_sensor_measure;
 
 
+
 /*Public variables --------------------------------------------------------------------------------------------*/
+
+/*tskSensorsGatekeeper*/
+extern osThreadId_t tskSensorsGatekeeperHandle;
+extern const osThreadAttr_t tskSensorsGatekeeper_attributes;
+
+/*Queues for INPUT and OUTPUT data*/
+/*qSensorsGatekeeperIN */
+extern osMessageQueueId_t qSensorsGatekeeperINHandle;
+extern const osMessageQueueAttr_t qSensorsGatekeeperIN_attributes;
+/*qSensorsGetekeeperOUT */
+extern osMessageQueueId_t qSensorsGetekeeperOUTHandle;
+extern const osMessageQueueAttr_t qSensorsGetekeeperOUT_attributes;
+
+/*to work with timer callback*/
 uint32_t timerID[MAX_SENSOR_ID];
+
+/*timer_sensor0 */
+extern osTimerId_t timer_sensor0Handle;
+extern const osTimerAttr_t timer_sensor0_attributes;
+
+/*timer_sensor1 */
+extern osTimerId_t timer_sensor1Handle;
+extern const osTimerAttr_t timer_sensor1_attributes;
+
+/*timer_sensor2 */
+extern osTimerId_t timer_sensor2Handle;
+extern const osTimerAttr_t timer_sensor2_attributes;
+
+/*timer_sensor3 */
+extern osTimerId_t timer_sensor3Handle;
+extern const osTimerAttr_t timer_sensor3_attributes;
+
+/*timer_sensor4 */
+extern osTimerId_t timer_sensor4Handle;
+extern const osTimerAttr_t timer_sensor4_attributes;
+
+/*timer_sensor5 */
+extern osTimerId_t timer_sensor5Handle;
+extern const osTimerAttr_t timer_sensor5_attributes;
+
+/*timer_sensor6 */
+extern osTimerId_t timer_sensor6Handle;
+extern const osTimerAttr_t timer_sensor6_attributes;
+
 
 
 /*Public functions --------------------------------------------------------------------------------------------*/
 
-void sensorsGatekeeper_internal_init( osMessageQueueId_t *qSensorsGatekeeperINHandle, osMessageQueueId_t *qSensorsGatekeeperOUTHandle );
+void sensorsGatekeeper_init( );
 
-void sensorsGatekeeper_processIncomingOrders(void);
+void sensorsGatekeeper_task( void* parameters);
 
-bool sensorsGatekeeper_takeMeasure( uint32_t sensorID ); /*returns true if there is no error*/
+void sensorsGatekeeper_takeMeasure( void* sensorID );
 
 #endif /* SENSORSGATEKEEPER_SENSORSGATEKEEPER_INTERNAL_H_ */
