@@ -61,39 +61,16 @@ extern const osThreadAttr_t tskSensorsGatekeeper_attributes;
 extern osMessageQueueId_t qSensorsGatekeeperINHandle;
 extern const osMessageQueueAttr_t qSensorsGatekeeperIN_attributes;
 /*qSensorsGetekeeperOUT */
-extern osMessageQueueId_t qSensorsGetekeeperOUTHandle;
+extern osMessageQueueId_t qSensorsGatekeeperOUTHandle;
 extern const osMessageQueueAttr_t qSensorsGetekeeperOUT_attributes;
 
 /*to work with timer callback*/
 uint32_t timerID[MAX_SENSOR_ID];
 
-/*timer_sensor0 */
-extern osTimerId_t timer_sensor0Handle;
-extern const osTimerAttr_t timer_sensor0_attributes;
+/*Sensors Timers*/
+extern osTimerId_t timer_sensorHandle[MAX_SENSOR_ID];
+extern const osTimerAttr_t timer_sensor_attributes[MAX_SENSOR_ID];
 
-/*timer_sensor1 */
-extern osTimerId_t timer_sensor1Handle;
-extern const osTimerAttr_t timer_sensor1_attributes;
-
-/*timer_sensor2 */
-extern osTimerId_t timer_sensor2Handle;
-extern const osTimerAttr_t timer_sensor2_attributes;
-
-/*timer_sensor3 */
-extern osTimerId_t timer_sensor3Handle;
-extern const osTimerAttr_t timer_sensor3_attributes;
-
-/*timer_sensor4 */
-extern osTimerId_t timer_sensor4Handle;
-extern const osTimerAttr_t timer_sensor4_attributes;
-
-/*timer_sensor5 */
-extern osTimerId_t timer_sensor5Handle;
-extern const osTimerAttr_t timer_sensor5_attributes;
-
-/*timer_sensor6 */
-extern osTimerId_t timer_sensor6Handle;
-extern const osTimerAttr_t timer_sensor6_attributes;
 
 
 
